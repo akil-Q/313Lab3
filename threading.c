@@ -31,14 +31,14 @@ int32_t t_create(fptr foo, int32_t arg1, int32_t arg2)
         current_context_idx = empty;
         getcontext(&contexts[empty].context);
 
-        contexts[empty].context.uc_stack.ss_sp = malloc(STK_SZ);
+        contexts[empty].context.uc_stack.ss_sp = (char*) malloc(STK_SZ);
         contexts[empty].context.uc_stack.ss_size = STK_SZ;
         contexts[empty].context.uc_stack.ss_flags = 0;
         contexts[empty].context.uc_link = NULL;
+        contexts[empty].state = VALID;
 
         makecontext(&contexts[empty].context, (void (*)(void))foo, 2, arg1, arg2);
 
-        contexts[empty].state = VALID;
         return 0;
 }
 
