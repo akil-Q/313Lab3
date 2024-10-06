@@ -1,7 +1,7 @@
 #include <threading.h>
 
 
-void t_init(void)
+void t_init()
 {
         // TODO
         // initialize thread by initializing various data structures our thread will use, such as stack, contexts, and current_context_idx
@@ -35,28 +35,38 @@ int32_t t_create(fptr foo, int32_t arg1, int32_t arg2)
         contexts[empty].context.uc_stack.ss_size = STK_SZ;
         contexts[empty].context.uc_stack.ss_flags = 0;
         contexts[empty].context.uc_link = NULL;
+
+        makecontext(&contexts[empty].context, (void (*)())foo, 2, arg1, arg2);
         contexts[empty].state = VALID;
-
-        makecontext(&contexts[empty].context, (void (*)(void))foo, 2, arg1, arg2);
-
         return 0;
 }
 
 int32_t t_yield(void)
 {
-        // TODO
-        // update current thread, then look for a valid thread in contexts and switch to it, returning the number of valid threads
         int counts = 0;
-        uint8_t swap;
-        for (swap = 0; swap < NUM_CTX; ++swap) {
-                if (contexts[swap].state == VALID && swap != current_context_idx) break;
+        volatile int next = (current_context_idx + 1 )% NUM_CTX;
+
+        // Save the current context
+        getcontext(&contexts[current_context_idx].context);
+
+        // Find the next valid context
+        while (contexts[next].state != VALID && next != current_context_idx) {
+                next = (next + 1) % NUM_CTX;
         }
-        if (swap == NUM_CTX) return 1;
-        swapcontext(&contexts[current_context_idx].context, &contexts[swap].context);
-        current_context_idx = swap;
+
+        if (next != current_context_idx) {
+                int orig = current_context_idx;
+                current_context_idx = (uint8_t)next;
+                swapcontext(&contexts[orig].context, &contexts[current_context_idx].context);
+        }
+
+        // Count valid contexts
         for (int i = 0; i < NUM_CTX; ++i) {
-                if (contexts[i].state == VALID) counts++;
+        if (contexts[i].state == VALID) {
+                counts++;
         }
+        }
+
         return counts;
 }
 
