@@ -78,6 +78,9 @@ void t_finish(void)
         contexts[current_context_idx].state = DONE;
         if (t_yield() == 0) {
                 swapcontext(&contexts[current_context_idx].context, &contexts[0].context);
+                for (int i = 0; i < NUM_CTX; ++i) {
+                        free(contexts[i].context.uc_stack.ss_sp);
+                }
         }
 }
 
