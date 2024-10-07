@@ -16,6 +16,7 @@ void t_init()
         contexts[0].context.uc_stack.ss_size = STK_SZ;
         contexts[0].context.uc_stack.ss_flags = 0;
         contexts[0].context.uc_link = NULL;
+        atexit(memclean);
 }
 
 int32_t t_create(fptr foo, int32_t arg1, int32_t arg2)
@@ -40,7 +41,7 @@ int32_t t_create(fptr foo, int32_t arg1, int32_t arg2)
         return 0;
 }
 
-int32_t t_yield(void)
+int32_t t_yield()
 {
         int counts = 0;
         int orig = current_context_idx;
@@ -69,7 +70,7 @@ int32_t t_yield(void)
         return counts;
 }
 
-void t_finish(void)
+void t_finish()
 {
         // TODO
         // free all memory used, by first freeing stack memory allocated in the current context, and then resetting the context entry to all 0s
@@ -77,13 +78,18 @@ void t_finish(void)
         contexts[current_context_idx].context.uc_stack.ss_sp = NULL;
         memset(&contexts[current_context_idx], 0, sizeof(struct worker_context));
         contexts[current_context_idx].state = DONE;
+
         if (t_yield() == 0) {
                 swapcontext(&contexts[current_context_idx].context, &contexts[0].context);
-                for (int i = 0; i < NUM_CTX; ++i) {
-                        if (contexts[i].state != INVALID && contexts[i].context.uc_stack.ss_sp != NULL) {
-                                free(contexts[i].context.uc_stack.ss_sp);
-                        }
-                }
         }
 }
 
+void memclean()
+{
+    for (int i = 0; i < NUM_CTX; ++i) {
+        if (contexts[i].state != INVALID && contexts[i].context.uc_stack.ss_sp != NULL) {
+            free(contexts[i].context.uc_stack.ss_sp);
+            contexts[i].context.uc_stack.ss_sp = NULL;
+        }
+    }
+}

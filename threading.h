@@ -83,4 +83,5 @@ int32_t t_yield();
  */
 void t_finish();
 
+void cleanup();
 #endif
