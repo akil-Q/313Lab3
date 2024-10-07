@@ -74,12 +74,15 @@ void t_finish(void)
         // TODO
         // free all memory used, by first freeing stack memory allocated in the current context, and then resetting the context entry to all 0s
         free(contexts[current_context_idx].context.uc_stack.ss_sp);
+        contexts[current_context_idx].context.uc_stack.ss_sp = NULL;
         memset(&contexts[current_context_idx], 0, sizeof(struct worker_context));
         contexts[current_context_idx].state = DONE;
         if (t_yield() == 0) {
                 swapcontext(&contexts[current_context_idx].context, &contexts[0].context);
                 for (int i = 0; i < NUM_CTX; ++i) {
-                        free(contexts[i].context.uc_stack.ss_sp);
+                        if (contexts[i].state != INVALID && contexts[i].context.uc_stack.ss_sp != NULL) {
+                                free(contexts[i].context.uc_stack.ss_sp);
+                        }
                 }
         }
 }

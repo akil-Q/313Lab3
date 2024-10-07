@@ -6,7 +6,7 @@
 #ifndef COOPERATIVE_MULTITASKING
 #define COOPERATIVE_MULTITASKING
 
-#define STK_SZ  4096
+#define STK_SZ  8192
 #define NUM_CTX 16
 
 /**
