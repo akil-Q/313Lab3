@@ -1,5 +1,5 @@
 #include <threading.h>
-
+#include <stdio.h>
 
 void t_init()
 {
@@ -28,7 +28,6 @@ int32_t t_create(fptr foo, int32_t arg1, int32_t arg2)
         }
         if (empty == NUM_CTX) return 1;
 
-        current_context_idx = empty;
         getcontext(&contexts[empty].context);
 
         contexts[empty].context.uc_stack.ss_sp = (char*) malloc(STK_SZ);
@@ -44,24 +43,24 @@ int32_t t_create(fptr foo, int32_t arg1, int32_t arg2)
 int32_t t_yield(void)
 {
         int counts = 0;
+        int orig = current_context_idx;
         volatile int next = (current_context_idx + 1 )% NUM_CTX;
 
         // Save the current context
         getcontext(&contexts[current_context_idx].context);
 
         // Find the next valid context
-        while (contexts[next].state != VALID && next != current_context_idx) {
+        while (next != orig) {
+                if (contexts[next].state == VALID) {
+                        current_context_idx = (uint8_t)next;
+                        swapcontext(&contexts[orig].context, &contexts[current_context_idx].context);
+                        break;
+                }
                 next = (next + 1) % NUM_CTX;
         }
 
-        if (next != current_context_idx) {
-                int orig = current_context_idx;
-                current_context_idx = (uint8_t)next;
-                swapcontext(&contexts[orig].context, &contexts[current_context_idx].context);
-        }
-
         // Count valid contexts
-        for (int i = 0; i < NUM_CTX; ++i) {
+        for (int i = 1; i < NUM_CTX; ++i) {
         if (contexts[i].state == VALID) {
                 counts++;
         }
@@ -77,6 +76,8 @@ void t_finish(void)
         free(contexts[current_context_idx].context.uc_stack.ss_sp);
         memset(&contexts[current_context_idx], 0, sizeof(struct worker_context));
         contexts[current_context_idx].state = DONE;
-        t_yield();
+        if (t_yield() == 0) {
+                swapcontext(&contexts[current_context_idx].context, &contexts[0].context);
+        }
 }
 
